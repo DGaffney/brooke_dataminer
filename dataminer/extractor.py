@@ -78,11 +78,14 @@ class Extractor:
         self.end_time = end_time
         self.data_fullness = data_fullness
         self.hashtag_operator = hashtag_operator
+        self.corpus_dir = corpus_dir
         self.current_user = os.popen('whoami').read().split('\n')[0]
         self.full_data_path = '/net/twitter/gardenhose-data/json'
         self.reduced_data_path = '/net/twitter/gardenhose-data/summarized'
         if working_directory is None:
-            self.working_directory="/home/"+self.current_user()
+            print(self.current_user)
+            print('/home/'+self.current_user)
+            self.working_directory="/home/"+self.current_user
         # Validate start and end date
         # TODO: wrap in function
         try:
@@ -92,16 +95,16 @@ class Extractor:
             date_string = 'Start date = {}, End date = {}'.format(start_date, end_date)
             print('Invalid time range, cannot parse time:\n' + date_string)
             sys.exit()
-        if (end_time-start_time).days < 0:
+        if (self.end_datetime-self.start_datetime).days < 0:
             date_string = 'Start date = {}, End date = {}'.format(start_date, end_date)
-            print('Invalid time range, end date before start date:\n' + date_string))
+            print('Invalid time range, end date before start date:\n' + date_string)
             sys.exit()
 
         # Extract tweets based on hashtag operator
-        if hashtag_operator == "AND":
+        if self.hashtag_operator == "AND":
             print "Extracting "+str.join(",", hashtag_set)
             self.extract(hashtag_set)
-        elif hashtag_operator == "OR":
+        elif self.hashtag_operator == "OR":
             for hashtag in hashtag_set:
                 print "Extracting "+hashtag
             self.extract([hashtag])
@@ -122,14 +125,14 @@ class Extractor:
             "AND" search)
         """
         # Get the relevant files depending on data fullness
-        if data_fullness == 'reduced':
+        if self.data_fullness == 'reduced':
             files = self.restricted_to_timeline(self.ls(self.reduced_data_path))
         else:
             files = self.restricted_to_timeline(self.ls(self.full_data_path))
         # Make directory to place tweets
         #TODO: also write a flat file at this point specifying what is being requested/when/who requested it
         full_corpus_path = self.full_corpus_dir(search_hashtags)
-        os.mkdirs(full_corpus_path)
+        os.makedirs(full_corpus_path)
         # Search tweets in each file for matches
         for file in files:
             self.extract_file(file, search_hashtags, full_corpus_path)
@@ -172,7 +175,7 @@ class Extractor:
         # Construct name of directory where to place tweets
         corpus_name = hashtag_str+'-'+self.start_time+'-'+self.end_time+'-'+self.data_fullness
         # Construct the path to the directory where tweets will be placed
-        full_corpus_path = working_directory+'/'+self.corpus_dir'/'+corpus_name
+        full_corpus_path = self.working_directory+'/'+self.corpus_dir+'/'+corpus_name
         # Make the directory
         return full_corpus_path
 
@@ -188,8 +191,10 @@ class Extractor:
         """
         ranged_files = []
         for file in files:
-            if ".lz4" in file or ".xz" in file:
+            if (".lz4" in file or ".xz" in file) and ('inprogress' not in file):
                 file_time = datetime.strptime(file.split(".")[-2], '%Y-%m-%d')
+            else:
+                continue
             if self.start_datetime <= file_time and file_time <= self.end_datetime:
                 ranged_files.append(file)
         return ranged_files
